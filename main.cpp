@@ -11,6 +11,15 @@ int main() {
     Node primary(NodeRole::PRIMARY, "Primary");
     Node backup(NodeRole::BACKUP,  "Backup");
 
+    // Primary'de değişiklik olunca Backup'a sync et
+    primary.set_sync_callback([&backup](const CallState& cs, bool is_add) {
+        if (is_add) {
+            backup.add_call(cs);
+        } else {
+            backup.remove_call(cs.call_id);
+        }
+    });
+
     // Heartbeat: Primary çökerse backup.takeover() çağır
     HeartBeat hb(backup, [&backup]() {
         backup.takeover();
@@ -45,6 +54,19 @@ int main() {
     std::cout << "\n--- Son durum ---\n";
     primary.print_calls();
     backup.print_calls();
+
+
+    // Eski Primary geri döndü
+    std::cout << "\n--- Eski Primary geri döndü! Re-sync başlıyor ---\n";
+    primary.set_state(NodeState::RUNNING);
+
+    // Yeni Primary (eski Backup) tüm state'i eski Primary'e kopyalar
+    backup.sync_all_to(primary);
+
+    std::cout << "\n--- Re-sync sonrası durum ---\n";
+    primary.print_calls();
+    backup.print_calls();
+
 
     return 0;
 }

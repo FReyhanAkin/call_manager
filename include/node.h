@@ -1,15 +1,10 @@
-//
-// Created by User on 18.04.2026.
-//
-
 #ifndef CALL_MANAGER_NODE_H
 #define CALL_MANAGER_NODE_H
-
-#pragma once
 
 #include "call_state.h"
 #include <unordered_map>
 #include <string>
+#include <functional>
 
 // Node'un rolü
 enum class NodeRole {
@@ -41,6 +36,13 @@ public:
     // Failover
     void takeover(); // Backup → Primary rolünü üstlenir
 
+    // State sync için callback
+    // Primary'de değişiklik olunca Backup'a haber ver
+    void set_sync_callback(std::function<void(const CallState&, bool)> cb);
+
+    // Tüm call state'i hedef node'a kopyalar
+    void sync_all_to(Node& target) const;
+
 private:
     std::string name_;
     NodeRole    role_;
@@ -49,6 +51,7 @@ private:
     // Aktif çağrıların tutulduğu tablo
     // key: call_id, value: CallState
     std::unordered_map<int, CallState> calls_;
+    std::function<void(const CallState&, bool)> sync_callback_;
 };
 
 
